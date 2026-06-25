@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Avenza Citizen Services Portal — Design Tokens
+ * Government light-blue & white colour identity:
+ *   Official blue  #1a56a0  (federal/provincial government registers)
+ *   Light blue     #e8f1fb  (page background wash)
+ *   White          #ffffff  (card surfaces)
+ *   Deep navy      #0d2d5e  (sidebar, headings)
+ */
+
+:root {
+  /* Page surfaces */
+  --color-bg:          #eef4fc;   /* light sky-blue page wash */
+  --color-surface:     #ffffff;   /* white cards */
+  --color-surface-alt: #dceaf8;   /* table header / alternate row */
+  --color-border:      #b8d0ee;   /* blue-tinted border */
+
+  /* Typography */
+  --color-text:        #0d2040;   /* deep blue-navy ink */
+  --color-text-muted:  #4a6a90;   /* muted blue-grey */
+
+  /* Sidebar — official government dark navy-blue */
+  --color-sidebar:        #0d2d5e;
+  --color-sidebar-text:   #9ab8d8;
+  --color-sidebar-active: #163d7a;
+
+  /* Accent — government medium blue for links, badges, highlights */
+  --color-accent:       #1a56a0;
+  --color-accent-hover: #154690;
+
+  /* Action buttons */
+  --color-btn:          #1a56a0;
+  --color-btn-hover:    #154690;
+  --color-btn-text:     #ffffff;
+}
+
+[data-theme='dark'] {
+  --color-bg:          #080f1c;
+  --color-surface:     #0e1a2e;
+  --color-surface-alt: #132238;
+  --color-border:      #1e3454;
+
+  --color-text:        #d4e4f8;
+  --color-text-muted:  #6a94be;
+
+  --color-sidebar:        #060e1c;
+  --color-sidebar-text:   #5a84ae;
+  --color-sidebar-active: #0f2040;
+
+  --color-accent:       #4a90d9;
+  --color-accent-hover: #3a80c9;
+
+  --color-btn:          #1a56a0;
+  --color-btn-hover:    #2060b0;
+  --color-btn-text:     #ffffff;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Government seal mark — blue ring */
+.seal-ring {
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    #4a90d9 0deg 8deg,
+    transparent 8deg 18deg
+  );
+  border-radius: 9999px;
+}

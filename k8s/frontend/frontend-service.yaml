@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Frontend Service
+#  NodePort exposes the app on a port on every K3s node IP
+#  so you can access it without Ingress during development.
+#  Access at: http://<vm-ip>:30080
+#
+#  For production with a domain, change type to ClusterIP
+#  and use the Ingress instead.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30080      # access at http://<node-ip>:30080
+      protocol: TCP
+---
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Frontend HorizontalPodAutoscaler
+# ═══════════════════════════════════════════════════════════
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Redis PersistentVolumeClaim
+#  Redis uses persistence for token blacklist durability
+#  across pod restarts. Size is intentionally small — Redis
+#  data is bounded by the 128MB maxmemory limit.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

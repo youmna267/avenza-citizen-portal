@@ -1,0 +1,103 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — PostgreSQL Deployment
+#  Single-replica StatefulSet-style deployment using a PVC
+#  for data persistence. For HA, migrate to a StatefulSet
+#  with a PostgreSQL operator (e.g. CloudNativePG).
+# ═══════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  replicas: 1
+  # Recreate strategy — required for single-node RWO PVC.
+  # RollingUpdate would try to start a new pod before killing
+  # the old one, causing a PVC attach conflict.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+        app.kubernetes.io/name: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            # Explicit data directory so Postgres writes to our volume
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            # Persistent data volume
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            # Init SQL — runs once on fresh database volume
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - citizen_user
+                - -d
+                - citizen_portal
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - citizen_user
+                - -d
+                - citizen_portal
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: postgres-init
+          configMap:
+            name: postgres-init-sql

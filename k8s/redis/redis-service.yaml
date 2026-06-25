@@ -1,0 +1,21 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Redis Service (ClusterIP)
+#  Internal only. Backend connects to REDIS_HOST=redis-service.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP

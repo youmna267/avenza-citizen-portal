@@ -1,0 +1,122 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Backend (NestJS) Deployment
+#  2 replicas by default — horizontally scalable because
+#  the backend is fully stateless (JWT tokens + Redis).
+#  Update image: to your registry path before applying.
+# ═══════════════════════════════════════════════════════════
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+  annotations:
+    # Helps kubectl rollout undo to find previous revision
+    kubernetes.io/change-cause: "Initial deployment"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1         # allow 1 extra pod during rollout
+      maxUnavailable: 0   # never drop below 2 healthy pods
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        app.kubernetes.io/name: backend
+    spec:
+      # Wait for dependencies before scheduling
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for postgres..."
+              until nc -z postgres-service 5432; do
+                sleep 2
+              done
+              echo "Postgres is ready."
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for redis..."
+              until nc -z redis-service 6379; do
+                sleep 2
+              done
+              echo "Redis is ready."
+      containers:
+        - name: backend
+          # ⚠️  Replace with your actual image after building and pushing:
+          #     docker build -t your-registry/avenza-backend:latest ./backend
+          #     docker push your-registry/avenza-backend:latest
+          image: avenza-backend:latest
+          imagePullPolicy: IfNotPresent   # use local image if present (K3s ctr import)
+          ports:
+            - containerPort: 4000
+              name: http
+          # ─── Non-secret env vars from ConfigMap ─────────────────
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          # ─── Secret env vars ────────────────────────────────────
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: DB_PASSWORD
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: REDIS_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: JWT_SECRET
+            - name: JWT_REFRESH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: JWT_REFRESH_SECRET
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 4000
+            failureThreshold: 12    # allow up to 60s for first startup
+            periodSeconds: 5

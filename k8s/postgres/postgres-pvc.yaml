@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — PostgreSQL PersistentVolumeClaim
+#  K3s uses local-path provisioner by default, which auto-
+#  creates a HostPath PV on the node. For multi-node clusters
+#  or cloud, replace storageClassName with your cloud PV class
+#  (e.g. "gp2" for AWS, "standard" for GKE).
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  accessModes:
+    - ReadWriteOnce       # Single node read-write — correct for a DB pod
+  storageClassName: local-path   # K3s default provisioner
+  resources:
+    requests:
+      storage: 5Gi

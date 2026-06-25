@@ -1,0 +1,25 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Backend ConfigMap (non-secret env vars)
+#  Secrets (passwords, JWT keys) are in backend-secret.yaml
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+data:
+  NODE_ENV: "production"
+  PORT: "4000"
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "citizen_portal"
+  DB_USER: "citizen_user"
+  DB_SSL: "false"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  JWT_EXPIRES_IN: "15m"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  FRONTEND_URL: "http://frontend-service:3000"

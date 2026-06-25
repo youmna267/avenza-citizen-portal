@@ -1,0 +1,16 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Frontend ConfigMap
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+data:
+  NODE_ENV: "production"
+  # This is the URL citizens' browsers will hit — update to your real domain
+  # when deploying with Ingress and a real hostname.
+  NEXT_PUBLIC_API_URL: "http://localhost:4000/api/v1"

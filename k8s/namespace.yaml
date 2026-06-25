@@ -1,0 +1,12 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza Citizen Services Portal — Kubernetes Namespace
+#  All resources live in this namespace for isolation.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: avenza
+  labels:
+    app.kubernetes.io/name: avenza-citizen-portal
+    app.kubernetes.io/managed-by: kubectl
+    environment: production

@@ -1,0 +1,52 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Ingress
+#  K3s ships with Traefik as the default Ingress controller.
+#  This routes:
+#    /api/*        → backend-service:4000
+#    /* (all else) → frontend-service:3000
+#
+#  To use this:
+#  1. Find your K3s node IP: kubectl get nodes -o wide
+#  2. Add to /etc/hosts (on your host machine for testing):
+#       <node-ip>  avenza.local
+#  3. Then open http://avenza.local in your browser.
+#
+#  For a real domain, replace avenza.local with your domain
+#  and point its DNS A record at the node IP.
+# ═══════════════════════════════════════════════════════════
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: avenza-ingress
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: avenza-ingress
+    app.kubernetes.io/part-of: avenza-citizen-portal
+  annotations:
+    # Traefik-specific annotations
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    # Strip /api prefix when forwarding to backend — backend already has /api in its prefix
+    # Remove this annotation if you want to keep the full path
+    traefik.ingress.kubernetes.io/router.middlewares: avenza-strip-api@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: avenza.local        # ← change this to your real domain
+      http:
+        paths:
+          # API traffic → backend
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 4000
+          # Everything else → frontend
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 3000

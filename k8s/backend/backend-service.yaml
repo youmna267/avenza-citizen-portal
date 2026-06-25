@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Backend Service (ClusterIP)
+#  Frontend and Ingress reach the backend through this service.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+      protocol: TCP
+---
+# ═══════════════════════════════════════════════════════════
+#  Avenza — Backend HorizontalPodAutoscaler
+#  Scales backend pods between 2 and 6 based on CPU load.
+#  Requires metrics-server to be installed on K3s.
+#  K3s ships with metrics-server disabled by default — enable:
+#    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+# ═══════════════════════════════════════════════════════════
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend-hpa
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

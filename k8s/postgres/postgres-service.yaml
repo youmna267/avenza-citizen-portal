@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════════════════════════
+#  Avenza — PostgreSQL Service (ClusterIP)
+#  Internal only. Resolves as "postgres-service.avenza.svc.cluster.local"
+#  within the cluster. The backend connects to DB_HOST=postgres-service.
+# ═══════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: avenza
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: avenza-citizen-portal
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
