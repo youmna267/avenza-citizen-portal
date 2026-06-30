@@ -1,218 +1,285 @@
 # Avenza — Citizen Services Portal
 
-A Dockerized government citizen services platform built by Avenza: citizens
-register, sign in, file complaints, request official documents, and track
-every submission from a sidebar dashboard. Staff sign in to a separate Admin
-section to review and update the status of every submission in the system.
-Light and dark themes are supported throughout.
+A production-grade e-governance platform built by Avenza for the DESC Digital Innovation Center, Mardan.
+Tender Reference: DESC-MRD-2026-CNC-088
 
-## What's new in v2
+---
 
-- **Sidebar navigation** replacing the original top bar, role-aware (citizens
-  see Dashboard / My complaints / My document requests; admins see Overview /
-  All complaints / All document requests).
-- **Admin role and dashboard.** A `role` column (`CITIZEN` | `ADMIN`) was
-  added to the `users` table. Admins can view every citizen's complaints and
-  document requests and change their status inline. Citizens still only see
-  and manage their own.
-- **Light / dark theme toggle**, persisted in the browser and respecting the
-  visitor's OS preference on first visit.
-- A seeded admin account is created automatically on first database init
-  (see Default admin account below).
+## Technology Stack
 
-## Stack
+| Category | Technology | Role |
+|---|---|---|
+| Frontend | Next.js 14 (TypeScript) | Server-side rendered citizen portal UI |
+| UI Styling | Tailwind CSS | Utility-first responsive design system |
+| Backend | NestJS 10 (TypeScript) | Modular REST API with decorator-based architecture |
+| Database | PostgreSQL 16 | ACID-compliant relational persistence layer |
+| Cache / Session | Redis 7 | Session tokens, rate-limiting, token blacklisting |
+| Authentication | JWT + Refresh Tokens | Stateless token-based auth with refresh flow |
+| Password Security | bcrypt cost factor 12 | Adaptive hashing — brute-force resistant |
+| API Documentation | Swagger / OpenAPI 3.1 | Auto-generated interactive API documentation |
+| Containerization | Docker (multi-stage) | Reproducible, minimal production images |
+| Local Orchestration | Docker Compose | Full-stack local dev environment |
+| Container Orchestration | K3s (Kubernetes) | Lightweight certified K8s cluster |
+| CI Pipeline | GitHub Actions | Automated lint, test, build, scan, and image push |
+| CD / GitOps | ArgoCD | Declarative Git-driven deployment reconciliation |
 
-| Layer | Technology |
+---
+
+## CI/CD Pipeline
+
+### Continuous Integration — GitHub Actions
+
+Every push to `main` automatically triggers the full pipeline:
+git push to main
+
+↓
+
+┌─────────────────────────────────────────────┐
+
+│  lint-backend   →  TypeScript type-check    │
+
+│  test-backend   →  Jest unit tests          │
+
+│  lint-frontend  →  Next.js build check      │
+
+└─────────────────────────────────────────────┘
+
+↓
+
+┌─────────────────────────────────────────────┐
+
+│  build-backend  →  Push to ghcr.io          │
+
+│  build-frontend →  Push to ghcr.io          │
+
+└─────────────────────────────────────────────┘
+
+↓
+
+┌─────────────────────────────────────────────┐
+
+│  security-scan  →  Trivy CVE scan           │
+
+│                    Results in GitHub        │
+
+│                    Security tab             │
+
+└─────────────────────────────────────────────┘
+Pipeline file: `.github/workflows/ci.yml`
+
+Published images:
+
+ghcr.io/youmna267/avenza-citizen-portal/backend:latest
+ghcr.io/youmna267/avenza-citizen-portal/frontend:latest
+
+### Continuous Deployment — ArgoCD GitOps
+
+ArgoCD watches the `k8s/` folder. When manifests change:
+git push (k8s/ changes)
+
+↓
+
+ArgoCD detects drift
+
+↓
+
+Auto-syncs to K3s cluster
+
+↓
+
+Rolling zero-downtime deployment
+
+↓
+
+Self-heals if pods drift from desired state
+
+ArgoCD application manifest: `k8s/argocd/application.yaml`
+ArgoCD UI: `http://192.168.231.128:32015`
+
+---
+
+## Access URLs
+
+| Service | URL |
 |---|---|
-| Frontend | Next.js 14 (App Router) · TypeScript · Tailwind CSS |
-| Backend | NestJS 10 · TypeScript · JWT auth · role-based guards |
-| Database | PostgreSQL 16 |
-| Containerization | Docker · Docker Compose |
-| Storage | Named Docker volume (`postgres-data`) — survives rebuilds |
+| Frontend (main app) | http://192.168.231.128:30090 |
+| Backend API | http://192.168.231.128:30091/api/v1 |
+| Swagger API Docs | http://192.168.231.128:30091/api/docs |
+| Health Check | http://192.168.231.128:30091/api/v1/health |
+| ArgoCD UI | http://192.168.231.128:32015 |
 
-## Default admin account
+---
 
-Seeded automatically the first time the database container initializes:
-
-```
+## Default Admin Account
 Email:    admin@citizenportal.gov
+
 Password: Admin@2026Secure
-```
+Change this password after first login in any real deployment.
 
-Change this password after first login in any real deployment — there is no
-in-app "change password" flow yet, so for now that means updating the
-`password_hash` directly in the database, or re-running the seed with a new
-bcrypt hash.
-
-## Folder structure
-
-```
-citizen-portal/
-├── docker-compose.yml
-├── .env.example
-├── database/
-│   └── init.sql                 # Schema: users (+role), complaints, applications, admin seed
-├── backend/                     # NestJS API
-│   ├── Dockerfile
-│   └── src/
-│       ├── auth/                # Register, login, JWT strategy/guard, RolesGuard
-│       ├── users/                # User entity (+ role)
-│       ├── complaints/           # Complaint CRUD, citizen + admin endpoints
-│       ├── applications/         # Document request CRUD, citizen + admin endpoints
-│       ├── common/filters/       # Global exception handling
-│       ├── app.module.ts
-│       └── main.ts
-└── frontend/                    # Next.js app
-    ├── Dockerfile
-    └── src/
-        ├── app/
-        │   ├── login/  register/
-        │   ├── dashboard/                  # Citizen overview
-        │   ├── complaints/  complaints/new/
-        │   ├── applications/  applications/new/
-        │   └── admin/                      # Admin overview
-        │       ├── complaints/             # All complaints, status editing
-        │       └── applications/           # All document requests, status editing
-        ├── components/           # Sidebar, AppShell, ThemeToggle, StatusBadge, etc.
-        ├── lib/                  # api client, auth/session helpers, theme context, useCurrentUser
-        └── types/
-```
+---
 
 ## Features
 
-**Authentication** — register, login, JWT-protected routes, `/auth/profile`
-endpoint for the current user. Passwords hashed with bcryptjs (12 rounds);
-never returned in API responses. JWTs now carry the user's role.
+**Authentication** — Register, login, JWT access tokens (15 min) + refresh tokens (7 days).
+Passwords hashed with bcryptjs at cost factor 12. Token blacklisting via Redis on logout.
 
-**Roles** — every account is `CITIZEN` or `ADMIN`. Citizens can only read and
-manage their own complaints and document requests. Admins can list every
-submission in the system and update its status; this is enforced server-side
-with a `RolesGuard`, not just hidden in the UI.
+**Roles** — Every account is CITIZEN or ADMIN. Enforced server-side with RolesGuard.
 
-**Citizen dashboard** — summary counts plus recent complaints and document
-requests, with full list views under "My complaints" and "My document
-requests" in the sidebar.
+**Citizen dashboard** — Summary stats, recent complaints and document requests,
+full list views with tracking numbers and live status.
 
-**Admin dashboard** — system-wide counts, recent activity across all
-citizens, and dedicated management tables for all complaints and all
-document requests with inline status-update controls.
+**Admin dashboard** — System-wide view of all citizen submissions with inline
+status update controls.
 
-**Complaints** — submit with title/category/description, auto-generated
-tracking number (`CMP-2026-000123`), status lifecycle: `SUBMITTED` →
-`UNDER_REVIEW` → `RESOLVED`. Status changes are admin-only.
+**Complaint management** — Submit complaints with auto tracking number (CMP-2026-XXXXXX).
+Status: SUBMITTED → UNDER_REVIEW → RESOLVED
 
-**Document requests** — Birth Certificate, Domicile Certificate, Character
-Certificate. Auto tracking number (`APP-2026-000123`), status lifecycle:
-`SUBMITTED` → `UNDER_REVIEW` → `APPROVED`/`REJECTED` → `COMPLETED`. Status
-changes are admin-only.
+**Document requests** — Birth Certificate, Domicile Certificate, Character Certificate.
+Auto tracking number (APP-2026-XXXXXX).
+Status: SUBMITTED → UNDER_REVIEW → APPROVED/REJECTED → COMPLETED
 
-**Theme** — light/dark toggle in the sidebar, stored in `localStorage`,
-falls back to the visitor's OS preference on first load.
+**Theme** — Light/dark toggle in sidebar, persisted in localStorage.
 
-**Security basics** — JWT bearer auth on every protected route, role checks
-enforced server-side via guard + decorator, per-route rate limiting on auth
-endpoints, global input validation (`class-validator`), Helmet security
-headers, parameterized queries via TypeORM, ownership checks so citizens can
-only read their own records (admins are explicitly exempted from that check).
+**API Documentation** — Full Swagger UI at `/api/docs` with Bearer auth support.
 
-## Database schema (summary)
+---
 
-- **users** — id, full_name, email (unique), cnic (unique), password_hash, role, phone, address
+## Database Schema
+
+- **users** — id, full_name, email, cnic, password_hash, role, phone, address
 - **complaints** — id, user_id (FK), tracking_no, title, category, description, status, remarks
 - **applications** — id, user_id (FK), tracking_no, type, applicant_name, purpose, status, remarks
 
-Full DDL with enums, indexes, auto-numbering triggers, and the admin seed
-insert is in `database/init.sql`.
+Full DDL with enums, indexes, triggers, and admin seed: `database/init.sql`
 
-## Running locally
+---
 
-**Prerequisites:** Docker and Docker Compose installed.
+## Project Structure
+avenza-citizen-portal/
 
-1. Copy the environment template and fill in real secrets:
+├── .github/
 
-   ```bash
-   cp .env.example .env
-   ```
+│   └── workflows/
 
-   At minimum, change `JWT_SECRET` and the database passwords. Generate a
-   strong secret with:
+│       └── ci.yml              # GitHub Actions CI pipeline
 
-   ```bash
-   openssl rand -hex 64
-   ```
+├── backend/                    # NestJS API
 
-2. Build and start everything:
+│   ├── src/
 
-   ```bash
-   docker compose up --build
-   ```
+│   │   ├── auth/               # JWT auth, refresh tokens, RolesGuard
 
-3. Once all three containers report healthy:
+│   │   ├── complaints/         # Complaint CRUD + admin endpoints
 
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:4000/api/v1
-   - Backend health check: http://localhost:4000/api/v1/health
-   - PostgreSQL: localhost:5432 (for inspection with `psql` or a GUI client)
+│   │   ├── applications/       # Document request CRUD + admin endpoints
 
-4. Sign in as the seeded admin (see Default admin account above) to see the
-   Admin dashboard, or register a new citizen account to see the citizen
-   flow.
+│   │   ├── users/              # User entity with roles
 
-### Upgrading an existing v1 deployment
+│   │   └── common/             # Redis module, exception filters
 
-The `users` table gained a `role` column and the database seed now inserts
-an admin account, both of which only run on first container initialization.
-If you already have a running v1 stack with data in its Postgres volume,
-`docker compose up --build` alone will **not** apply the new schema, since
-the init script only runs against an empty database volume.
+│   ├── jest.config.json        # Test configuration
 
-The simplest path for a local/test deployment with no data worth keeping:
+│   └── Dockerfile              # Multi-stage production build
+
+├── frontend/                   # Next.js 14 App Router
+
+│   ├── src/
+
+│   │   ├── app/                # Pages: dashboard, admin, complaints, applications
+
+│   │   ├── components/         # Sidebar, AppShell, ThemeToggle, StatusBadge
+
+│   │   └── lib/                # API client, auth helpers, theme context
+
+│   └── Dockerfile
+
+├── k8s/                        # Kubernetes manifests
+
+│   ├── namespace.yaml
+
+│   ├── secrets/                # PostgreSQL, Redis, JWT secrets
+
+│   ├── configmaps/             # Non-secret environment config
+
+│   ├── postgres/               # PVC, Deployment, Service
+
+│   ├── redis/                  # PVC, Deployment, Service
+
+│   ├── backend/                # Deployment, Service, HPA
+
+│   ├── frontend/               # Deployment, Service, HPA
+
+│   ├── ingress/                # Traefik ingress routing
+
+│   ├── argocd/
+
+│   │   └── application.yaml    # ArgoCD GitOps application
+
+│   └── deploy.sh               # One-command deploy script
+
+├── database/
+
+│   └── init.sql                # PostgreSQL schema + admin seed
+
+├── docker-compose.yml          # Local development stack
+
+└── .env.example                # Environment template
+
+---
+
+## Running Locally with Docker Compose
 
 ```bash
-docker compose down -v   # stops containers AND wipes the old database volume
+cp .env.example .env
+# Edit .env — set JWT_SECRET and database passwords
 docker compose up --build
 ```
 
-This re-runs `database/init.sql` from scratch, including the new `role`
-column and the admin seed. If you have real citizen data you need to keep,
-this needs a proper migration instead of a volume wipe — ask if you want
-help writing one.
+Access at http://localhost:3000
 
-### Stopping / resetting
+---
+
+## Kubernetes Deployment (K3s)
+
+### First time
 
 ```bash
-docker compose down            # stop containers, keep data
-docker compose down -v         # stop containers AND wipe the database volume
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+bash k8s/deploy.sh
 ```
 
-## API endpoints
+### After VM restart
+
+```bash
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+kubectl rollout restart deployment/postgres deployment/redis deployment/backend deployment/frontend -n avenza
+```
+
+### Check status
+
+```bash
+kubectl get pods -n avenza
+kubectl get applications -n argocd
+```
+
+---
+
+## API Endpoints
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/v1/auth/register` | – | Create citizen account, returns JWT |
-| POST | `/api/v1/auth/login` | – | Authenticate, returns JWT (includes role) |
-| GET | `/api/v1/auth/profile` | check | Current user's profile |
-| POST | `/api/v1/complaints` | check | File a complaint |
-| GET | `/api/v1/complaints` | check | List your own complaints |
-| GET | `/api/v1/complaints/admin/all` | Admin | List every complaint in the system |
-| GET | `/api/v1/complaints/:id` | check | Get one complaint (owner, or any admin) |
-| PATCH | `/api/v1/complaints/:id/status` | Admin | Update a complaint's status |
-| POST | `/api/v1/applications` | check | Submit a document request |
-| GET | `/api/v1/applications` | check | List your own requests |
-| GET | `/api/v1/applications/admin/all` | Admin | List every request in the system |
-| GET | `/api/v1/applications/:id` | check | Get one request (owner, or any admin) |
-| PATCH | `/api/v1/applications/:id/status` | Admin | Update a request's status |
-| GET | `/api/v1/health` | – | Service health check |
-
-All protected routes require `Authorization: Bearer <token>`. Routes marked
-"Admin" return `403 Forbidden` for citizen accounts even with a valid token.
-
-## What's deliberately out of scope for this build
-
-Per the original brief, this stops at a working Dockerized application with
-basic role separation. Not included: an in-app way to promote a citizen to
-admin (currently requires a direct database update), password reset/change
-flows, audit logging of admin actions, Kubernetes manifests, CI/CD
-pipelines, Terraform/IaC provisioning, or Prometheus/Grafana observability.
-The services remain stateless aside from Postgres and expose health
-endpoints, so they're a reasonable starting point for that work later.
+| POST | `/api/v1/auth/register` | Public | Register citizen account |
+| POST | `/api/v1/auth/login` | Public | Login, returns access + refresh tokens |
+| POST | `/api/v1/auth/refresh` | Public | Refresh access token |
+| POST | `/api/v1/auth/logout` | Bearer | Invalidate tokens in Redis |
+| GET | `/api/v1/auth/profile` | Bearer | Get current user profile |
+| POST | `/api/v1/complaints` | Bearer | File a complaint |
+| GET | `/api/v1/complaints` | Bearer | List my complaints |
+| GET | `/api/v1/complaints/admin/all` | Admin | All complaints system-wide |
+| PATCH | `/api/v1/complaints/:id/status` | Admin | Update complaint status |
+| POST | `/api/v1/applications` | Bearer | Submit document request |
+| GET | `/api/v1/applications` | Bearer | List my document requests |
+| GET | `/api/v1/applications/admin/all` | Admin | All requests system-wide |
+| PATCH | `/api/v1/applications/:id/status` | Admin | Update request status |
+| GET | `/api/v1/health` | Public | Service health check |
